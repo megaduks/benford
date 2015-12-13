@@ -2,6 +2,7 @@ library(igraph)
 library(ggplot2)
 library(data.table)
 library(benford.analysis)
+library(tools)
 
 # 
 # Benford's Law in social networks
@@ -105,6 +106,22 @@ get.data.synthetic <- function(name, nodes, param) {
   g
 }
 
+# 
+# Helper function to prune distributions of centrality measures by removing entries equal to either 0 or Nan
+#
+#  parameters
+#    x - the numerical vector to be pruned
+#
+#  result
+#    x - the numerical vector with 0s and Nans removed
+
+prune.distribution <- function(x) {
+  x <- x[!is.nan(x) & x > 0]
+  if (length(x) == 0)
+    x <- c(1)
+  x
+}
+
 #
 # The dataframe containing all the results of conducted measurements. The columns are the following:
 #   dataset - the name of the dataset
@@ -122,9 +139,10 @@ get.data.synthetic <- function(name, nodes, param) {
 results <- data.frame(dataset = NA, num.vertices = NA, num.edges = NA, measure = NA, chi.sq = NA, chi.sq.pval = NA, mad = NA, mat = NA, mat.pval = NA, df = NA, pcc = NA)
 
 # get the list of all data files 
-data.files <- list.files(path = "data/")
+data.files <- list.files(path = "data/", pattern = "*csv")
 
-# the first loop iterates over all files
+# the first loop iterates over all files with real networks and for each network it creates the igraph object, computes the distribution of degrees, betweenness, and 
+# clustering coefficients, and performs the Benford concordance tests.
 
 for (data.file in data.files) {
   
@@ -146,7 +164,7 @@ for (data.file in data.files) {
   degree.pcc <- cor(fd.degree, benford)
   
   # compute the distribution of betweenness and remove all nodes with zero betweenness
-  b <- betweenness(g, directed = FALSE)
+  b <- estimate_betweenness(g, directed = FALSE, cutoff = 3)
   b <- b[b > 0]
   
   # compute the distribution of betweenness first digit and compute the Pearson's correlation coefficient of this distribution to the Benford's distribution
@@ -167,32 +185,109 @@ for (data.file in data.files) {
   benford <- round(num.nodes * benford)
   clustering.pcc <- cor(fd.clustering, benford)
   
-  # compute the distribution of the alpha centrality for a fixed alpha = 0.5 and retain only non-zero values
-  a <- alpha.centrality(g, alpha = 0.5)
-  a <- a[a > 0]
-  
-  # compute the distribution of degree first digit and compute the Pearson's correlation coefficient of this distribution to the Benford's distribution
-  fd.alpha <- table(sapply(a, first.digit))
-  benford <- log10(1 + 1/seq(1:length(fd.alpha)))
-  benford <- round(num.nodes * benford)
-  alpha.pcc <- cor(fd.alpha, benford)
   
   # perform actual test of Bedford compliance on the four centrality measures
   test.degree       <- benford(d, number.of.digits = 1, discrete = TRUE)
   test.betweenness  <- benford(b, number.of.digits = 1, discrete = TRUE)
   test.clustering   <- benford(c, number.of.digits = 1, discrete = TRUE)
-  test.alpha        <- benford(a, number.of.digits = 1, discrete = TRUE)
   
-  # fill the data frame with results of all four tests
+  # save test results so that further we can generate figures
+  save(test.degree, test.betweenness, test.clustering, file = paste(file_path_sans_ext(data.file),"tests","RData", sep = "."))
+  
+  # fill the data frame with results of all three tests
   test.degree.result <- c(data.file, num.nodes, num.edges, "degree", test.degree$stats$chisq$statistic, test.degree$stats$chisq$p.value, test.degree$MAD, 
                           test.degree$stats$mantissa.arc.test$statistic, test.degree$stats$mantissa.arc.test$p.value, test.degree$distortion.factor, degree.pcc)
   test.betweenness.result <- c(data.file, num.nodes, num.edges, "betweenness", test.betweenness$stats$chisq$statistic, test.betweenness$stats$chisq$p.value, test.betweenness$MAD, 
                           test.betweenness$stats$mantissa.arc.test$statistic, test.betweenness$stats$mantissa.arc.test$p.value, test.betweenness$distortion.factor, betweenness.pcc)
   test.cluster.result <- c(data.file, num.nodes, num.edges, "clustering coefficient", test.clustering$stats$chisq$statistic, test.clustering$stats$chisq$p.value, test.clustering$MAD, 
                           test.clustering$stats$mantissa.arc.test$statistic, test.clustering$stats$mantissa.arc.test$p.value, test.clustering$distortion.factor, clustering.pcc)
-  test.alpha.result <- c(data.file, num.nodes, num.edges, "alpha centrality", test.alpha$stats$chisq$statistic, test.alpha$stats$chisq$p.value, test.alpha$MAD, 
-                          test.alpha$stats$mantissa.arc.test$statistic, test.alpha$stats$mantissa.arc.test$p.value, test.alpha$distortion.factor, alpha.pcc)
   
-  results <- rbind(results, test.degree.result, test.betweenness.result, test.cluster.result, test.alpha.result)
+  # save test results into the final data frame
+  results <- rbind(results, test.degree.result, test.betweenness.result, test.cluster.result)
+
+  # remove the first row of the results data fraome (contains only initial NULLs)
+  results <- results[-c(1), ]  
+  results <- transform(results, num.vertices = as.numeric(num.vertices), num.edges = as.numeric(num.edges), chi.sq = as.numeric(chi.sq), chi.sq.pval = as.numeric(chi.sq.pval), mad = as.numeric(mad), mat = as.numeric(mat), mat.pval = as.numeric(mat.pval), df = as.numeric(df), pcc = as.numeric(pcc))
 }
 
+
+# the second loop iterates over all generative network models. for each network model 5 different network parameters are selected, and for each parameter 100 realizations of 
+# a synthetic network are generated. the results of Benford concordance test is averaged over all 100 realizations of a particular network model with a particular main parameter setting
+
+# the list of generative artificial network models
+generative.models <- c("random.graph", "small.world", "preferential.attachment", "forest.fire")
+
+
+# number of vertices to be created in artificial graphs
+num.vertices <- 10000
+
+# number of realizations of each network
+num.graphs <- 100
+
+# parameters for generative network models
+edge.probability <- seq(0.0001, 0.001, length.out = 5)
+rewire.probability <- seq(0.001, 0.005, length.out = 5)
+alpha.coefficient <- seq(1, 3, length.out = 5)
+forward.burning <- seq(0.01, 0.25, length.out = 5)
+
+network.parameters <- rbind(edge.probability, rewire.probability, alpha.coefficient, forward.burning)
+
+# data frame to store the results of all generative network model experiments
+test.results <- data.frame(nodel.name = character(), param.value = numeric(), measure = character(), chisq.stat = numeric(), chisq.pval = numeric(), mad = numeric(), mat.stat = numeric(), mat.pval = numeric(), df = numeric())
+
+for (i in 1:length(generative.models)) {
+  # read the name of the model
+  model <- generative.models[i]
+  
+  # read the parameter set for the model
+  parameter.set <- network.parameters[i,]
+  
+  # iterate over each value of the main parameter
+  for (j in 1:length(parameter.set)) {
+    
+    # generate num.graphs artificial graphs according to the given generative model and its main parameter
+    graphs <- lapply(rep(model, num.graphs), get.data.synthetic, num.vertices, parameter.set[j])
+    
+    # compute the distribution of degrees
+    d <- lapply(graphs, degree, normalized = FALSE)
+    d <- lapply(d, prune.distribution)
+    
+    # test the concordance of the Benford distribution to the distribution of node degrees
+    test.degree <- lapply(d, benford, number.of.digits = 1, discrete = TRUE)
+    
+    # iterate over all test results and read the values of these results into vectors
+    for (k in 1:num.graphs) {
+      tr <- test.degree[[k]]
+      tr.values <- data.frame(model, parameter.set[j], measure = "degree", tr$stats$chisq$statistic, tr$stats$chisq$p.value, tr$MAD, tr$stats$mantissa.arc.test$statistic, tr$stats$mantissa.arc.test$p.value, tr$distortion.factor)
+      test.results <- rbind(test.results, tr.values)
+    }
+    
+    # compute the distribution of betweenness
+    b <- lapply(graphs, estimate_betweenness, directed = FALSE, cutoff = 3)
+    b <- lapply(b, prune.distribution)
+    
+    # test the concordance of the Benford distribution to the distribution of node betweenness
+    test.betweenness <- lapply(b, benford, number.of.digits = 1, discrete = TRUE)
+    
+    # iterate over all test results and read the values of these results into vectors
+    for (k in 1:num.graphs) {
+      tr <- test.betweenness[[k]]
+      tr.values <- data.frame(model, parameter.set[j], measure = "betweenness", tr$stats$chisq$statistic, tr$stats$chisq$p.value, tr$MAD, tr$stats$mantissa.arc.test$statistic, tr$stats$mantissa.arc.test$p.value, tr$distortion.factor)
+      test.results <- rbind(test.results, tr.values)
+    }
+    
+    # compute the distribution of closeness
+    c <- lapply(graphs, transitivity, type = 'local', isolates = 'zero')
+    c <- lapply(c, prune.distribution)
+    
+    # test the concordance of the Benford distribution to the distribution of node closeness
+    test.closeness <- lapply(c, benford, number.of.digits = 1, discrete = TRUE)
+    
+    # iterate over all test results and read the values of these results into vectors
+    for (k in 1:num.graphs) {
+      tr <- test.closeness[[k]]
+      tr.values <- data.frame(model, parameter.set[j], measure = "closeness", tr$stats$chisq$statistic, tr$stats$chisq$p.value, tr$MAD, tr$stats$mantissa.arc.test$statistic, tr$stats$mantissa.arc.test$p.value, tr$distortion.factor)
+      test.results <- rbind(test.results, tr.values)
+    }
+  }
+}
