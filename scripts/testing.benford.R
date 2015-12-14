@@ -154,7 +154,7 @@ for (data.file in data.files) {
 
   # compute the distribution of degrees and remove all isolated nodes
   d <- degree(g, normalized = FALSE)
-  d <- d[d > 0]
+  d <- prune.distribution(d)
   
   # compute the distribution of degree first digit and compute the Pearson's correlation coefficient of this distribution to the Benford's distribution
   fd.degree <- table(sapply(d, first.digit))
@@ -164,7 +164,7 @@ for (data.file in data.files) {
   
   # compute the distribution of betweenness and remove all nodes with zero betweenness
   b <- estimate_betweenness(g, directed = FALSE, cutoff = 3)
-  b <- b[b > 0]
+  b <- prune.distribution(b)
   
   # compute the distribution of betweenness first digit and compute the Pearson's correlation coefficient of this distribution to the Benford's distribution
   fd.betweenness <- table(sapply(b, first.digit))
@@ -173,8 +173,14 @@ for (data.file in data.files) {
   betweenness.pcc <- cor(fd.betweenness, benford)
   
   # compute the distribution of closeness and remove all nodes with zero closeness
-  l <- closeness(g, mode = 'all')
-  l <- l[l > 0]
+  # estimation is required for larger graphs due to very high computational cost of measuring closeness centrality
+  if (num.nodes < 30000)
+    l <- closeness(g, mode = 'all')
+  else if (num.nodes < 50000)
+    l <- estimate_closeness(g, mode = 'all', cutoff = 5)
+  else
+    l <- estimate_closeness(g, mode = 'all', cutoff = 3)
+  l <- prune.distribution(l)
   
   # compute the distribution of closeness first digit and compute the Pearson's correlation coefficient of this distribution to the Benford's distribution
   fd.closeness <- table(sapply(l, first.digit))
@@ -184,9 +190,7 @@ for (data.file in data.files) {
   
   # compute the distribution of the local clustering coefficient and retain only non-null and non-zero values
   c <- transitivity(g, type = 'local', isolates = 'zero')
-  c <- c[!is.nan(c) & c > 0]
-  if (length(c) == 0)
-    c <- c(0)
+  c <- prune.distribution(c)
   
   # compute the distribution of local clustering coefficient first digit and compute the Pearson's correlation coefficient of this distribution to the Benford's distribution
   fd.clustering <- table(sapply(c, first.digit))
@@ -221,6 +225,9 @@ for (data.file in data.files) {
   results <- results[-c(1), ]  
   results <- transform(results, num.vertices = as.numeric(num.vertices), num.edges = as.numeric(num.edges), chi.sq = as.numeric(chi.sq), chi.sq.pval = as.numeric(chi.sq.pval), mad = as.numeric(mad), mat = as.numeric(mat), mat.pval = as.numeric(mat.pval), df = as.numeric(df), pcc = as.numeric(pcc))
 }
+
+# save the results to the file
+write.csv(x = results, file = 'results.real.networks.csv')
 
 
 # the second loop iterates over all generative network models. for each network model 5 different network parameters are selected, and for each parameter 100 realizations of 
