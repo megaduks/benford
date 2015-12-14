@@ -18,7 +18,6 @@ library(tools)
 #  * degree distribution
 #  * betweenness distribution
 #  * local clustering coefficient distribution
-#  * alpha centrality distribution (for alpha = 0.5)
 #
 # Ddatasets used in the experiment were only slightly modified w.r.t. original SNAP data repository
 # spaces between attributes were changed into tablulations
@@ -172,7 +171,17 @@ for (data.file in data.files) {
   benford <- log10(1 + 1/seq(1:length(fd.betweenness)))
   benford <- round(num.nodes * benford)
   betweenness.pcc <- cor(fd.betweenness, benford)
-    
+  
+  # compute the distribution of closeness and remove all nodes with zero closeness
+  l <- closeness(g, mode = 'all')
+  l <- l[l > 0]
+  
+  # compute the distribution of closeness first digit and compute the Pearson's correlation coefficient of this distribution to the Benford's distribution
+  fd.closeness <- table(sapply(l, first.digit))
+  benford <- log10(1 + 1/seq(1:length(fd.closeness)))
+  benford <- round(num.nodes * benford)
+  closeness.pcc <- cor(fd.closeness, benford)
+  
   # compute the distribution of the local clustering coefficient and retain only non-null and non-zero values
   c <- transitivity(g, type = 'local', isolates = 'zero')
   c <- c[!is.nan(c) & c > 0]
@@ -190,20 +199,23 @@ for (data.file in data.files) {
   test.degree       <- benford(d, number.of.digits = 1, discrete = TRUE)
   test.betweenness  <- benford(b, number.of.digits = 1, discrete = TRUE)
   test.clustering   <- benford(c, number.of.digits = 1, discrete = TRUE)
+  test.closeness    <- benford(l, number.of.digits = 1, discrete = TRUE)
   
   # save test results so that further we can generate figures
-  save(test.degree, test.betweenness, test.clustering, file = paste(file_path_sans_ext(data.file),"tests","RData", sep = "."))
+  save(test.degree, test.betweenness, test.clustering, test.closeness, file = paste(file_path_sans_ext(data.file),"tests","RData", sep = "."))
   
-  # fill the data frame with results of all three tests
+  # fill the data frame with results of all four tests
   test.degree.result <- c(data.file, num.nodes, num.edges, "degree", test.degree$stats$chisq$statistic, test.degree$stats$chisq$p.value, test.degree$MAD, 
                           test.degree$stats$mantissa.arc.test$statistic, test.degree$stats$mantissa.arc.test$p.value, test.degree$distortion.factor, degree.pcc)
   test.betweenness.result <- c(data.file, num.nodes, num.edges, "betweenness", test.betweenness$stats$chisq$statistic, test.betweenness$stats$chisq$p.value, test.betweenness$MAD, 
                           test.betweenness$stats$mantissa.arc.test$statistic, test.betweenness$stats$mantissa.arc.test$p.value, test.betweenness$distortion.factor, betweenness.pcc)
   test.cluster.result <- c(data.file, num.nodes, num.edges, "clustering coefficient", test.clustering$stats$chisq$statistic, test.clustering$stats$chisq$p.value, test.clustering$MAD, 
                           test.clustering$stats$mantissa.arc.test$statistic, test.clustering$stats$mantissa.arc.test$p.value, test.clustering$distortion.factor, clustering.pcc)
+  test.closeness.result <- c(data.file, num.nodes, num.edges, "closeness", test.closeness$stats$chisq$statistic, test.closeness$stats$chisq$p.value, test.closeness$MAD, 
+                           test.closeness$stats$mantissa.arc.test$statistic, test.closeness$stats$mantissa.arc.test$p.value, test.closeness$distortion.factor, closeness.pcc)
   
   # save test results into the final data frame
-  results <- rbind(results, test.degree.result, test.betweenness.result, test.cluster.result)
+  results <- rbind(results, test.degree.result, test.betweenness.result, test.cluster.result, test.closeness.result)
 
   # remove the first row of the results data fraome (contains only initial NULLs)
   results <- results[-c(1), ]  
