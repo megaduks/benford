@@ -1,0 +1,5 @@
+"","dataset","measure","flags"
+"1","enron.csv","betweenness",2
+"2","facebook.csv","betweenness",2
+"3","physics.csv","betweenness",2
+"4","twitter.csv","betweenness",4

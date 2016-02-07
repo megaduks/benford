@@ -135,99 +135,103 @@ prune.distribution <- function(x) {
 #   df - Distortion Factor
 #   pcc - Pearson's correlation coefficient
 
-results <- data.frame(dataset = NA, num.vertices = NA, num.edges = NA, measure = NA, chi.sq = NA, chi.sq.pval = NA, mad = NA, mat = NA, mat.pval = NA, df = NA, pcc = NA)
-
-# get the list of all data files 
-data.files <- list.files(path = "data/", pattern = "*csv")
+# results <- data.frame(dataset = NA, num.vertices = NA, num.edges = NA, measure = NA, chi.sq = NA, chi.sq.pval = NA, mad = NA, mat = NA, mat.pval = NA, df = NA, pcc = NA)
+# 
+# # get the list of all data files 
+# data.files <- list.files(path = "data/", pattern = "*csv")
 
 # the first loop iterates over all files with real networks and for each network it creates the igraph object, computes the distribution of degrees, betweenness, and 
 # clustering coefficients, and performs the Benford concordance tests.
 
-for (data.file in data.files) {
+# for (data.file in data.files) {
+#   
+#   # read the data file and transform it to an igraph object
+#   g <- get.data.from.file(data.file)
+#   
+#   # compute the number of vertices and edges
+#   num.nodes <- vcount(g)
+#   num.edges <- ecount(g)
+# 
+#   # compute the distribution of degrees and remove all isolated nodes
+#   d <- degree(g, normalized = FALSE)
+#   d <- prune.distribution(d)
+#   
+#   # compute the distribution of degree first digit and compute the Pearson's correlation coefficient of this distribution to the Benford's distribution
+#   fd.degree <- table(sapply(d, first.digit))
+#   benford <- log10(1 + 1/seq(1:length(fd.degree)))
+#   benford <- round(num.nodes * benford)
+#   degree.pcc <- cor(fd.degree, benford)
+#   
+#   # compute the distribution of betweenness and remove all nodes with zero betweenness
+#   b <- betweenness(g, directed = FALSE)
+#   b <- prune.distribution(b)
+#   
+#   # compute the distribution of betweenness first digit and compute the Pearson's correlation coefficient of this distribution to the Benford's distribution
+#   fd.betweenness <- table(sapply(b, first.digit))
+#   benford <- log10(1 + 1/seq(1:length(fd.betweenness)))
+#   benford <- round(num.nodes * benford)
+#   betweenness.pcc <- cor(fd.betweenness, benford)
+#   
+#   # compute the distribution of closeness and remove all nodes with zero closeness
+#   # estimation is required for larger graphs due to very high computational cost of measuring closeness centrality
+#   
+# #   if (num.nodes < 30000)
+# #     l <- closeness(g, mode = 'all')
+# #   else if (num.nodes < 50000)
+# #     l <- estimate_closeness(g, mode = 'all', cutoff = 5)
+# #   else
+# #     l <- estimate_closeness(g, mode = 'all', cutoff = 3)
+#   
+#   l <- closeness(g, mode = 'all')
+#   l <- prune.distribution(l)
   
-  # read the data file and transform it to an igraph object
-  g <- get.data.from.file(data.file)
-  
-  # compute the number of vertices and edges
-  num.nodes <- vcount(g)
-  num.edges <- ecount(g)
+#   # compute the distribution of closeness first digit and compute the Pearson's correlation coefficient of this distribution to the Benford's distribution
+#   fd.closeness <- table(sapply(l, first.digit))
+#   benford <- log10(1 + 1/seq(1:length(fd.closeness)))
+#   benford <- round(num.nodes * benford)
+#   closeness.pcc <- cor(fd.closeness, benford)
+#   
+#   # compute the distribution of the local clustering coefficient and retain only non-null and non-zero values
+#   c <- transitivity(g, type = 'local', isolates = 'zero')
+#   c <- prune.distribution(c)
+#   
+#   # compute the distribution of local clustering coefficient first digit and compute the Pearson's correlation coefficient of this distribution to the Benford's distribution
+#   fd.clustering <- table(sapply(c, first.digit))
+#   benford <- log10(1 + 1/seq(1:length(fd.clustering)))
+#   benford <- round(num.nodes * benford)
+#   clustering.pcc <- cor(fd.clustering, benford)
+#   
+#   
+#   # perform actual test of Bedford compliance on the four centrality measures
+#   test.degree       <- benford(d, number.of.digits = 1, discrete = TRUE)
+#   test.betweenness  <- benford(b, number.of.digits = 1, discrete = TRUE)
+#   test.clustering   <- benford(c, number.of.digits = 1, discrete = TRUE)
+#   test.closeness    <- benford(l, number.of.digits = 1, discrete = TRUE)
+#   
+#   # save test results so that further we can generate figures
+#   save(test.degree, test.betweenness, test.clustering, test.closeness, file = paste(file_path_sans_ext(data.file),"tests","RData", sep = "."))
+#   
+#   # fill the data frame with results of all four tests
+#   test.degree.result <- c(data.file, num.nodes, num.edges, "degree", test.degree$stats$chisq$statistic, test.degree$stats$chisq$p.value, test.degree$MAD, 
+#                           test.degree$stats$mantissa.arc.test$statistic, test.degree$stats$mantissa.arc.test$p.value, test.degree$distortion.factor, degree.pcc)
+#   test.betweenness.result <- c(data.file, num.nodes, num.edges, "betweenness", test.betweenness$stats$chisq$statistic, test.betweenness$stats$chisq$p.value, test.betweenness$MAD, 
+#                           test.betweenness$stats$mantissa.arc.test$statistic, test.betweenness$stats$mantissa.arc.test$p.value, test.betweenness$distortion.factor, betweenness.pcc)
+#   test.cluster.result <- c(data.file, num.nodes, num.edges, "clustering coefficient", test.clustering$stats$chisq$statistic, test.clustering$stats$chisq$p.value, test.clustering$MAD, 
+#                           test.clustering$stats$mantissa.arc.test$statistic, test.clustering$stats$mantissa.arc.test$p.value, test.clustering$distortion.factor, clustering.pcc)
+#   test.closeness.result <- c(data.file, num.nodes, num.edges, "closeness", test.closeness$stats$chisq$statistic, test.closeness$stats$chisq$p.value, test.closeness$MAD, 
+#                            test.closeness$stats$mantissa.arc.test$statistic, test.closeness$stats$mantissa.arc.test$p.value, test.closeness$distortion.factor, closeness.pcc)
+#   
+#   # save test results into the final data frame
+#   results <- rbind(results, test.degree.result, test.betweenness.result, test.cluster.result, test.closeness.result)
+# 
+#   # remove the first row of the results data fraome (contains only initial NULLs)
+#   results <- results[-c(1), ]  
+#   results <- transform(results, num.vertices = as.numeric(num.vertices), num.edges = as.numeric(num.edges), chi.sq = as.numeric(chi.sq), chi.sq.pval = as.numeric(chi.sq.pval), mad = as.numeric(mad), mat = as.numeric(mat), mat.pval = as.numeric(mat.pval), df = as.numeric(df), pcc = as.numeric(pcc))
+# }
+# 
+# # save the results to the file
+# write.csv(x = results, file = 'results.real.networks.csv')
 
-  # compute the distribution of degrees and remove all isolated nodes
-  d <- degree(g, normalized = FALSE)
-  d <- prune.distribution(d)
-  
-  # compute the distribution of degree first digit and compute the Pearson's correlation coefficient of this distribution to the Benford's distribution
-  fd.degree <- table(sapply(d, first.digit))
-  benford <- log10(1 + 1/seq(1:length(fd.degree)))
-  benford <- round(num.nodes * benford)
-  degree.pcc <- cor(fd.degree, benford)
-  
-  # compute the distribution of betweenness and remove all nodes with zero betweenness
-  b <- estimate_betweenness(g, directed = FALSE, cutoff = 3)
-  b <- prune.distribution(b)
-  
-  # compute the distribution of betweenness first digit and compute the Pearson's correlation coefficient of this distribution to the Benford's distribution
-  fd.betweenness <- table(sapply(b, first.digit))
-  benford <- log10(1 + 1/seq(1:length(fd.betweenness)))
-  benford <- round(num.nodes * benford)
-  betweenness.pcc <- cor(fd.betweenness, benford)
-  
-  # compute the distribution of closeness and remove all nodes with zero closeness
-  # estimation is required for larger graphs due to very high computational cost of measuring closeness centrality
-  if (num.nodes < 30000)
-    l <- closeness(g, mode = 'all')
-  else if (num.nodes < 50000)
-    l <- estimate_closeness(g, mode = 'all', cutoff = 5)
-  else
-    l <- estimate_closeness(g, mode = 'all', cutoff = 3)
-  l <- prune.distribution(l)
-  
-  # compute the distribution of closeness first digit and compute the Pearson's correlation coefficient of this distribution to the Benford's distribution
-  fd.closeness <- table(sapply(l, first.digit))
-  benford <- log10(1 + 1/seq(1:length(fd.closeness)))
-  benford <- round(num.nodes * benford)
-  closeness.pcc <- cor(fd.closeness, benford)
-  
-  # compute the distribution of the local clustering coefficient and retain only non-null and non-zero values
-  c <- transitivity(g, type = 'local', isolates = 'zero')
-  c <- prune.distribution(c)
-  
-  # compute the distribution of local clustering coefficient first digit and compute the Pearson's correlation coefficient of this distribution to the Benford's distribution
-  fd.clustering <- table(sapply(c, first.digit))
-  benford <- log10(1 + 1/seq(1:length(fd.clustering)))
-  benford <- round(num.nodes * benford)
-  clustering.pcc <- cor(fd.clustering, benford)
-  
-  
-  # perform actual test of Bedford compliance on the four centrality measures
-  test.degree       <- benford(d, number.of.digits = 1, discrete = TRUE)
-  test.betweenness  <- benford(b, number.of.digits = 1, discrete = TRUE)
-  test.clustering   <- benford(c, number.of.digits = 1, discrete = TRUE)
-  test.closeness    <- benford(l, number.of.digits = 1, discrete = TRUE)
-  
-  # save test results so that further we can generate figures
-  save(test.degree, test.betweenness, test.clustering, test.closeness, file = paste(file_path_sans_ext(data.file),"tests","RData", sep = "."))
-  
-  # fill the data frame with results of all four tests
-  test.degree.result <- c(data.file, num.nodes, num.edges, "degree", test.degree$stats$chisq$statistic, test.degree$stats$chisq$p.value, test.degree$MAD, 
-                          test.degree$stats$mantissa.arc.test$statistic, test.degree$stats$mantissa.arc.test$p.value, test.degree$distortion.factor, degree.pcc)
-  test.betweenness.result <- c(data.file, num.nodes, num.edges, "betweenness", test.betweenness$stats$chisq$statistic, test.betweenness$stats$chisq$p.value, test.betweenness$MAD, 
-                          test.betweenness$stats$mantissa.arc.test$statistic, test.betweenness$stats$mantissa.arc.test$p.value, test.betweenness$distortion.factor, betweenness.pcc)
-  test.cluster.result <- c(data.file, num.nodes, num.edges, "clustering coefficient", test.clustering$stats$chisq$statistic, test.clustering$stats$chisq$p.value, test.clustering$MAD, 
-                          test.clustering$stats$mantissa.arc.test$statistic, test.clustering$stats$mantissa.arc.test$p.value, test.clustering$distortion.factor, clustering.pcc)
-  test.closeness.result <- c(data.file, num.nodes, num.edges, "closeness", test.closeness$stats$chisq$statistic, test.closeness$stats$chisq$p.value, test.closeness$MAD, 
-                           test.closeness$stats$mantissa.arc.test$statistic, test.closeness$stats$mantissa.arc.test$p.value, test.closeness$distortion.factor, closeness.pcc)
-  
-  # save test results into the final data frame
-  results <- rbind(results, test.degree.result, test.betweenness.result, test.cluster.result, test.closeness.result)
-
-  # remove the first row of the results data fraome (contains only initial NULLs)
-  results <- results[-c(1), ]  
-  results <- transform(results, num.vertices = as.numeric(num.vertices), num.edges = as.numeric(num.edges), chi.sq = as.numeric(chi.sq), chi.sq.pval = as.numeric(chi.sq.pval), mad = as.numeric(mad), mat = as.numeric(mat), mat.pval = as.numeric(mat.pval), df = as.numeric(df), pcc = as.numeric(pcc))
-}
-
-# save the results to the file
-write.csv(x = results, file = 'results.real.networks.csv')
 
 
 # the second loop iterates over all generative network models. for each network model 5 different network parameters are selected, and for each parameter 100 realizations of 
@@ -244,10 +248,10 @@ num.vertices <- 10000
 num.graphs <- 100
 
 # parameters for generative network models
-edge.probability <- seq(0.0001, 0.001, length.out = 5)
-rewire.probability <- seq(0.001, 0.005, length.out = 5)
-alpha.coefficient <- seq(1, 3, length.out = 5)
-forward.burning <- seq(0.01, 0.25, length.out = 5)
+edge.probability <- seq(0.0001, 0.001, length.out = 10)
+rewire.probability <- seq(0.001, 0.005, length.out = 10)
+alpha.coefficient <- seq(1, 3, length.out = 10)
+forward.burning <- seq(0.01, 0.25, length.out = 10)
 
 network.parameters <- rbind(edge.probability, rewire.probability, alpha.coefficient, forward.burning)
 
@@ -282,7 +286,7 @@ for (i in 1:length(generative.models)) {
     }
     
     # compute the distribution of betweenness
-    b <- lapply(graphs, estimate_betweenness, directed = FALSE, cutoff = 3)
+    b <- lapply(graphs, betweenness, directed = FALSE)
     b <- lapply(b, prune.distribution)
     
     # test the concordance of the Benford distribution to the distribution of node betweenness
@@ -296,7 +300,7 @@ for (i in 1:length(generative.models)) {
     }
     
     # compute the distribution of closeness
-    c <- lapply(graphs, transitivity, type = 'local', isolates = 'zero')
+    c <- lapply(graphs, closeness, mode = 'all')
     c <- lapply(c, prune.distribution)
     
     # test the concordance of the Benford distribution to the distribution of node closeness
@@ -308,5 +312,27 @@ for (i in 1:length(generative.models)) {
       tr.values <- data.frame(model, parameter.set[j], measure = "closeness", tr$stats$chisq$statistic, tr$stats$chisq$p.value, tr$MAD, tr$stats$mantissa.arc.test$statistic, tr$stats$mantissa.arc.test$p.value, tr$distortion.factor)
       test.results <- rbind(test.results, tr.values)
     }
+    
+    # compute the distribution of local clustering coefficient
+    c <- lapply(graphs, transitivity, type = 'local')
+    c <- lapply(c, prune.distribution)
+    
+    # test the concordance of the Benford distribution to the distribution of node local clustering coefficient
+    test.clustering <- lapply(c, benford, number.of.digits = 1, discrete = TRUE)
+    
+    # iterate over all test results and read the values of these results into vectors
+    for (k in 1:num.graphs) {
+      tr <- test.clustering[[k]]
+      tr.values <- data.frame(model, parameter.set[j], measure = "clustering", tr$stats$chisq$statistic, tr$stats$chisq$p.value, tr$MAD, tr$stats$mantissa.arc.test$statistic, tr$stats$mantissa.arc.test$p.value, tr$distortion.factor)
+      test.results <- rbind(test.results, tr.values)
+    }
   }
+  
+  # remove the first row of the results data fraome (contains only initial NULLs)
+#   test.results <- test.results[-c(1), ]  
+#   test.results <- transform(test.results, num.vertices = as.numeric(num.vertices), num.edges = as.numeric(num.edges), chi.sq = as.numeric(chi.sq), chi.sq.pval = as.numeric(chi.sq.pval), mad = as.numeric(mad), mat = as.numeric(mat), mat.pval = as.numeric(mat.pval), df = as.numeric(df), pcc = as.numeric(pcc))
 }
+
+# save the results to the file
+write.csv(x = test.results, file = 'results.artificial.networks.csv')
+
