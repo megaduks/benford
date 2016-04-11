@@ -1,10 +1,5 @@
-
 library(igraph)
-library(ggplot2)
-library(data.table)
-library(benford.analysis)
 library(BenfordTests)
-library(tools)
 
 
 get.data.synthetic <- function(name, nodes, param) {
@@ -38,7 +33,7 @@ prune.distribution <- function(x) {
 }
 
 # the list of generative artificial network models
-#generative.models <- c("random.graph", "small.world", "preferential.attachment", "forest.fire")
+#generative.models <- c("random.graph", "small.world", "preferential.attachment")
 generative.models <- c("forest.fire")
 
 
@@ -52,7 +47,7 @@ num.graphs <- 50
 edge.probability <- seq(0.001, 0.01, length.out = 10)
 rewire.probability <- seq(0.01, 0.05, length.out = 10)
 alpha.coefficient <- seq(1, 3, length.out = 10)
-forward.burning <- seq(0.01, 0.10, length.out = 10)
+forward.burning <- seq(0.01, 0.25, length.out = 10)
 
 network.parameters <- rbind(edge.probability, rewire.probability, alpha.coefficient, forward.burning)
 
@@ -64,7 +59,7 @@ for (i in 1:length(generative.models)) {
   model <- generative.models[i]
   
   # read the parameter set for the model
-  parameter.set <- network.parameters[i,]
+  parameter.set <- network.parameters[4,]
   
   # iterate over each value of the main parameter
   for (j in 1:length(parameter.set)) {
@@ -75,7 +70,7 @@ for (i in 1:length(generative.models)) {
     # compute centrality measures
     d <- lapply(graphs, degree, normalized = FALSE)
     d <- lapply(d, prune.distribution)
-    b <- lapply(graphs, betweenness, directed = FALSE)
+    b <- lapply(graphs, betweenness, directed = FALSE, normalized = TRUE)
     b <- lapply(b, prune.distribution)
     c <- lapply(graphs, closeness, mode = 'all')
     c <- lapply(c, prune.distribution)
@@ -193,4 +188,4 @@ for (i in 1:length(generative.models)) {
 }
 
 # save the results to the file
-write.csv(x = results, file = 'results.extended.artificial.networks2.csv')
+write.csv(x = results, file = 'results.extended.artificial.networks.ff.csv')

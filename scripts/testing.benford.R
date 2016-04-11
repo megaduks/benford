@@ -2,7 +2,9 @@ library(igraph)
 library(ggplot2)
 library(data.table)
 library(benford.analysis)
+library(BenfordTests)
 library(tools)
+
 
 # 
 # Benford's Law in social networks
@@ -239,7 +241,6 @@ prune.distribution <- function(x) {
 
 # the list of generative artificial network models
 generative.models <- c("random.graph", "small.world", "preferential.attachment", "forest.fire")
-
 
 # number of vertices to be created in artificial graphs
 num.vertices <- 10000
