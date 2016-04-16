@@ -6,18 +6,21 @@ library(ggplot2)
 # size of the sample
 n <- 10000
 
-# pure samples of Benford and Normal distributions
-benford.sample <- rbenf(n)
-normal.sample <- rnorm(n)
+
 
 # ratio of Benford's distribution contamination with Normal samples
-ratio <- seq(0, 1, by = 0.05)
+ratio <- seq(0, 1, by = 0.01)
 
 results <- data.frame(i = numeric(), test = character(), test.number = character(), pval = numeric(), statistic = numeric()) 
 
 for (i in ratio) {
   for (j in 1:50) {
     
+    # pure samples of Benford and Normal distributions
+    benford.sample <- rbenf(n)
+    normal.sample <- abs(rnorm(n = n, mean = 4, sd = 2))
+    
+    # mixture of Benford and Normal distributions
     data.sample <- c( sample(benford.sample, n*i), sample(normal.sample, n*(1-i)))
     
     t <- chisq.benftest(data.sample)
@@ -53,11 +56,11 @@ for (i in ratio) {
     results <- rbind(results, d)
     
     t <- benford(data.sample, number.of.digits = 1)
-    d <- data.frame(i, test = "Mean Absolute Deviation", test.number = "t9", pval = NA, statistic = t$MAD)
+    d <- data.frame(i, test = t$stats$mantissa.arc.test$method, test.number = "t9", pval = t$stats$mantissa.arc.test$p.value, statistic = t$stats$mantissa.arc.test$statistic)
     results <- rbind(results, d)
-    d <- data.frame(i, test = "Distortion Factor", test.number = "t10", pval = NA, statistic = t$distortion.factor)
+    d <- data.frame(i, test = "Mean Absolute Deviation", test.number = "t10", pval = NA, statistic = t$MAD)
     results <- rbind(results, d)
-    d <- data.frame(i, test = t$stats$mantissa.arc.test$method, test.number = "t11", pval = t$stats$mantissa.arc.test$p.value, statistic = t$stats$mantissa.arc.test$statistic)
+    d <- data.frame(i, test = "Distortion Factor", test.number = "t11", pval = NA, statistic = t$distortion.factor)
     results <- rbind(results, d)
   }
 }
