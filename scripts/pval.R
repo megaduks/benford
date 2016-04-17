@@ -80,12 +80,9 @@ avg.results <- avg.results %>%
   mutate( flag = ifelse((avg.pval>=0.05 & test.number=='t6') | flag==1, 1, 0)) %>%
   mutate( flag = ifelse((avg.pval>=0.05 & test.number=='t7') | flag==1, 1, 0)) %>%
   mutate( flag = ifelse((avg.pval>=0.05 & test.number=='t8') | flag==1, 1, 0)) %>%
-  mutate( flag = ifelse((avg.stat<=0.0018 & test.number=='t9') | flag==1, 1, 0)) %>%
-  mutate( flag = ifelse((abs((avg.stat/100)/(0.638/sqrt(1000))) <= 1.96 & test.number=='t10') | flag==1, 1, 0)) %>%
-  mutate( flag = ifelse((avg.pval>=0.05 & test.number=='t11') | flag==1, 1, 0))
+  mutate( flag = ifelse((avg.pval>=0.05 & test.number=='t9') | flag==1, 1, 0)) %>%
+  mutate( flag = ifelse((avg.stat<=0.0018 & test.number=='t10') | flag==1, 1, 0)) %>%
+  mutate( flag = ifelse((abs((avg.stat/100)/(0.638/sqrt(n))) <= 1.96 & test.number=='t11') | flag==1, 1, 0))
 
-
-avg.results %>% select(i, test.number, flag, avg.pval, avg.stat) %>% filter(flag == 1)
-
-ggplot(avg.results[!(avg.results$test.number %in% c('t9','t10')), ], aes(x = i, y = avg.pval, colour = test.number)) + 
-  geom_line() + geom_point()
+ggplot(avg.results[!(avg.results$test.number %in% c('t10','t11')), ], aes(x = i, y = avg.pval, colour = test.number)) + 
+  geom_line() + geom_point() + xlim(0.75, 1) + xlab('purity of Benford\'s distribution') + ylab('average test p-value')
