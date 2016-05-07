@@ -1,7 +1,0 @@
-"dataset","measure","flags"
-"citations","degree",2
-"citations","betweenness",3
-"enron","betweenness",2
-"facebook","betweenness",7
-"physics","betweenness",2
-"twitter","betweenness",12

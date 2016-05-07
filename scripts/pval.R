@@ -85,4 +85,5 @@ avg.results <- avg.results %>%
   mutate( flag = ifelse((abs((avg.stat/100)/(0.638/sqrt(n))) <= 1.96 & test.number=='t11') | flag==1, 1, 0))
 
 ggplot(avg.results[!(avg.results$test.number %in% c('t10','t11')), ], aes(x = i, y = avg.pval, colour = test.number)) + 
-  geom_line() + geom_point() + xlim(0.75, 1) + xlab('purity of Benford\'s distribution') + ylab('average test p-value')
+  geom_line() + geom_point() + xlim(0.75, 1) + xlab('purity of Benford\'s distribution') + ylab('average test p-value') +
+  geom_hline(aes(yintercept = 0.05), colour = 'red', linetype = 2) + scale_y_continuous(breaks = c(0, 0.05, 0.1, 0.2, 0.3, 0.4, 0.5))
