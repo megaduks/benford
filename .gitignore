@@ -1,5 +1,8 @@
 .gitignore
-.Rproj.user
 .Rhistory
 .RData
+*.Rproj
 data/*
+article/*
+.Rproj.user/*
+core*
